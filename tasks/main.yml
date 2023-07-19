@@ -1,0 +1,19 @@
+---
+
+# Install components so a system can generate gpfs rpms for rocky 8 systems, and then generate packages for the target kernel
+
+- name: gpfs_rpm_build_server | Load Distro specific variables
+  ansible.builtin.include_vars:
+    file: "vars/{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yml"
+
+- name: gpfs_rpm_build_server | Install dependencies
+  import_tasks: preflight.yml
+
+- name: gpfs_rpm_build_server | Install IBM Spectrum Scale software
+  import_tasks: spectrum_scale.yml
+
+- name: gpfs_rpm_build_server | Generate gpfs.gplbin package
+  import_tasks: generate_gpfs_gplbin.yml
+
+- name: gpfs_rpm_build_server | Download rpms for redistribution
+  import_tasks: gather_rpms.yml

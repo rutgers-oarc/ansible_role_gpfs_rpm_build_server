@@ -1,0 +1,25 @@
+---
+
+# THIS FILE WILL HAVE SENSITIVE INFORMATION AND SHOULD BE ANSIBLE VAULT ENCRYPTED
+# Your organization will need to provide information anywhere you see "<< text >>"
+
+gpfs_rpm_private_key:
+  password: "<< Password used to generate gpg key pair >>"
+  # After generating the keypair on a scratch system, you can view the signature with the command "gpg --list-secret-keys --fingerprint"
+  signature: "<< Signature of generated private key >>"
+  # 
+  organization_gpg_private_key_filename: "RPM-GPG-PRIVATEKEY-<< organization >>"
+  org_name: "<< Name used when generation gpg key pair >>"
+  key: |
+    -----BEGIN PGP PRIVATE KEY BLOCK-----
+
+    << Private gpg key your organization generates >>
+    -----END PGP PRIVATE KEY BLOCK-----
+
+gpfs_rpm_public_keys:
+  # Fill in your organization name in the variable name, be sure to update variable name in the task files
+  organization_rpm_public_key: |
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+    << Public gpg key from the private/public keypair your organization generates >>
+    -----END PGP PUBLIC KEY BLOCK-----

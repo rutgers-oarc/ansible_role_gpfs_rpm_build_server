@@ -1,0 +1,76 @@
+---
+
+# Find and remove old versions of the gpfs dependencies, for whatever reason the yum module can't handle trying to upgrade rpm installs if previous versions are present
+
+- name: gpfs_rpm_build_server | Gather information on all installed packages
+  ansible.builtin.package_facts:
+    manager:  auto
+
+- name: gpfs_rpm_build_server | Find all installed gpfs.base packages
+  ansible.builtin.set_fact:
+    installed_gpfs_base: "{{ ansible_facts.packages | list | select('match', '^gpfs.base*') | list }}"
+
+- name: gpfs_rpm_build_server | Find all installed gpfs.gpl packages
+  ansible.builtin.set_fact:
+    installed_gpfs_gpl: "{{ ansible_facts.packages | list | select('match', '^gpfs.gpl*') | list }}"
+
+- name: gpfs_rpm_build_server | Remove old versions of gpfs.base
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ installed_gpfs_base }}"
+  when:
+    - gpfs_new_version != ansible_facts.packages[item][0]['version'] or gpfs_new_version_release != ansible_facts.packages[item][0]['release']
+
+- name: gpfs_rpm_build_server | Remove old versions of gpfs.gpl
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ installed_gpfs_gpl }}"
+  when:
+    - gpfs_new_version != ansible_facts.packages[item][0]['version'] or gpfs_new_version_release != ansible_facts.packages[item][0]['release']
+
+# Generate the gpfs.gplbin rpm for the target kernel
+
+- name: gpfs_rpm_build_server | Install gpfs dependencies
+  ansible.builtin.yum:
+    name: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/{{ item }}
+    state: present
+  with_items: "{{ gpfs_gplbin_dependencies }}"
+
+- name: gpfs_rpm_build_server | Check if gpfs.gpbin rpm already exists
+  ansible.builtin.stat:
+    path: "{{ gpfs_gplbin_rpmpath }}"
+  register: gpfs_gplbin_rpm
+
+- name: gpfs_rpm_build_server | Generate gpfs.gplbin rpm
+  ansible.builtin.shell:  "/usr/lpp/mmfs/bin/mmbuildgpl --build-package --kernel-release {{ target_kernel }}"
+  when: not gpfs_gplbin_rpm.stat.exists
+  tags:
+    - skip_ansible_lint
+
+- name: gpfs_rpm_build_server | Sign gpfs.gplbin rpm with organization key in Rocky
+  ansible.builtin.shell: "rpm --addsign {{ gpfs_gplbin_rpmpath }}"
+  when:
+    - not gpfs_gplbin_rpm.stat.exists
+    - ansible_distribution == "Rocky"
+  tags:
+    - skip_ansible_lint
+
+- name: gpfs_rpm_build_server | Sign gpfs.gplbin rpm with organization key in Centos 7
+  ansible.builtin.shell: "/root/.sign_rpm_centos7.exp {{ gpfs_gplbin_rpmpath }}"
+  when:
+    - not gpfs_gplbin_rpm.stat.exists
+    - ansible_distribution == "Centos"
+    - ansible_distribution_major_version == "7"
+  tags:
+    - skip_ansible_lint
+
+- name: gpfs_rpm_build_server | Copy gpfs.gplbin rpm with the rest
+  ansible.builtin.copy:
+    src: "{{ gpfs_gplbin_rpmpath }}"
+    remote_src: true
+    dest: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}
+    owner: root
+    group: root
+    mode: 0555

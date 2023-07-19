@@ -1,0 +1,75 @@
+---
+
+# Download and install spectrum scale software
+# Gather gpfs rpms including manager packages
+
+- name: gpfs_rpm_build_server | Check if desired Spectrum Scale version already exists
+  ansible.builtin.stat:
+    path: /root/gpfs-{{ gpfs_version }}-dist
+  register: spectrum_scale_installed
+
+- name: gpfs_rpm_build_server | Copy Spectrum Scale software to system
+  ansible.builtin.copy:
+    src: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/{{ spectrum_scale_installer }}"
+    #src: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/Spectrum_Scale_Data_Access-{{ gpfs_new_version }}.{{ gpfs_new_version_release }}-x86_64-Linux-install"
+    dest: /root
+    owner: root
+    group: root
+    mode: 0544
+
+- name: gpfs_rpm_build_server | Install Spectrum Scale software
+  ansible.builtin.shell: /root/{{spectrum_scale_installer}} --silent --dir /root/gpfs-{{ gpfs_version }}-dist
+  args:
+    chdir: /root
+  when: not spectrum_scale_installed.stat.exists
+  tags:
+    - skip_ansible_lint
+
+- name: gpfs_rpm_build_server | Import Spectrum Scale Version Specific GPG Key
+  ansible.builtin.rpm_key:
+    key: "/root/gpfs-{{ gpfs_version }}-dist/Public_Keys/SpectrumScale_public_key.pgp"
+    state: present
+
+- name: gpfs_rpm_build_server | Create gpfs version directory
+  ansible.builtin.file:
+    path: /opt/gpfs-{{ gpfs_version }}
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: gpfs_rpm_build_server | Create OS major version directory
+  ansible.builtin.file:
+    path: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: gpfs_rpm_build_server | Copy rpms to new folder
+  ansible.builtin.copy:
+    src: /root/gpfs-{{ gpfs_version }}-dist/gpfs_rpms/{{ item }}
+    dest: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}
+    remote_src: true
+    owner: root
+    group: root
+    mode: 0555
+  with_items: "{{ gpfs_rpms }}"
+
+- name: gpfs_rpm_build_server | Create mgr rpm directory
+  ansible.builtin.file:
+    path: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: gpfs_rpm_build_server | Copy mgr rpms to new folder
+  ansible.builtin.copy:
+    src: /root/gpfs-{{ gpfs_version }}-dist/{{ item }}
+    dest: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm
+    remote_src: true
+    owner: root
+    group: root
+    mode: 0555
+  with_items: "{{ gpfs_mgr_rpms_source }}"

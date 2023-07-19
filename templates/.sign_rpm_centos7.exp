@@ -1,0 +1,14 @@
+#!/usr/bin/expect -f
+
+#
+# Maintained by Ansible
+#
+
+# Signs rpms in Centos 7 by answering password prompt
+# GPG utilities in Centos 7 lack the functioality to read password from file to answer password prompt
+# /root/.rpmmacros still needs to read password from separate password file as well for the whole thing to work
+
+spawn rpm --addsign {*}$argv
+expect -exact "Enter pass phrase: "
+send -- "{{ gpfs_rpm_private_key.password }}\r"
+expect eof

@@ -1,0 +1,14 @@
+---
+
+# gpfs software may not be compatible with the latest and greatest OS releases
+# Set minor release here for repo configs
+
+os_major_version: "8"
+os_minor_release: "7"
+
+target_kernel: "4.18.0-425.19.2.el8_7.x86_64"
+
+repo_files:
+  - Rocky-AppStream.repo
+  - Rocky-BaseOS.repo
+  - Rocky-Extras.repo

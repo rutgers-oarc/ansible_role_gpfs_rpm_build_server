@@ -1,0 +1,1 @@
+{{ gpfs_rpm_private_key.password }}

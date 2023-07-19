@@ -1,0 +1,5 @@
+---
+
+target_kernel: "3.10.0-1160.90.1.el7.x86_64"
+
+os_major_version: "7"

@@ -1,0 +1,108 @@
+---
+
+# Gather the resulting rpms to the local ansible server for redistribution in other roles
+
+- name: gpfs_rpm_build_server | Create software installer folder on ansible server if it's not there already
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}"
+    state: directory
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Create gpfs folder for gpfs software distribution
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs"
+    state: directory
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Create gpfs version folder on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}"
+    state: directory
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Copy the relevant Spectrum Scale public gpg key for redistribution
+  ansible.builtin.fetch:
+    src: "/root/gpfs-{{ gpfs_version }}-dist/Public_Keys/SpectrumScale_public_key.pgp"
+    dest: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/"
+    flat: true
+
+- name: gpfs_rpm_build_server | Set permissions on Spectrum Scale public gpg key on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/SpectrumScale_public_key.pgp"
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Create OS major version folder on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}"
+    state: directory
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Create manager rpm folder on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm"
+    state: directory
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Download core rpms for redistribution on ansible server
+  ansible.builtin.fetch:
+    src: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/{{ item }}
+    dest: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/"
+    flat: true
+  with_items: "{{ gpfs_rpms }}"
+
+- name: gpfs_rpm_build_server | Download gpfs.gplbin rpm for redistribution on ansible server
+  ansible.builtin.fetch:
+    src: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/gpfs.gplbin-{{ target_kernel }}-{{ gpfs_version }}.x86_64.rpm
+    dest: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/"
+    flat: true
+
+- name: gpfs_rpm_build_server | Download manager rpms for redistribution on ansible server
+  ansible.builtin.fetch:
+    src: /opt/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm/{{ item }}
+    dest: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm/"
+    flat: true
+  with_items: "{{ gpfs_mgr_rpms }}"
+
+- name: gpfs_rpm_build_server | Set permissions on core rpm files on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/{{ item }}"
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  with_items: "{{ gpfs_rpms }}"
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Set permissions on gpfs.gplbin rpm files on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/gpfs.gplbin-{{ target_kernel }}-{{ gpfs_version }}.x86_64.rpm"
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  delegate_to: localhost
+
+- name: gpfs_rpm_build_server | Set permissions on manager rpm files on ansible server
+  ansible.builtin.file:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/gpfs-{{ gpfs_version }}/el{{ os_major_version }}/mgrrpm/{{ item }}"
+    owner: root
+    group: "{{ gpfs_rpm_output_group }}"
+    mode: 0775
+  with_items: "{{ gpfs_mgr_rpms }}"
+  delegate_to: localhost

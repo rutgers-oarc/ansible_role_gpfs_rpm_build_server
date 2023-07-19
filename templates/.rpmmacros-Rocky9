@@ -1,0 +1,11 @@
+#
+# Maintained by Ansible
+#
+
+# _gpg_name is the name given when the keypair is generated, this is how you identify which key is in use if there are multiple in play.
+
+%_signature gpg
+%_gpg_path /root/.gnupg
+%_gpg_name {{ gpfs_rpm_private_key.org_name }}
+%_gpgbin /usr/bin/gpg2
+%__gpg_sign_cmd %{__gpg} gpg --force-v3-sigs --batch --pinentry-mode loopback --passphrase-file /root/.gpg_rpm_creds --verbose --no-armor --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}'

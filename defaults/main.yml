@@ -1,0 +1,54 @@
+---
+
+gpfs_rpm_packages:
+  - "@Development Tools"
+
+gpfs_new_version: "5.1.7"
+gpfs_new_version_release: "1"
+
+gpfs_version: "{{ gpfs_new_version }}-{{ gpfs_new_version_release }}"
+
+# Parent folder and subfolder where all gpfs rpms will be gathered on the ansible server for redistribution to clients in other roles
+gpfs_rpm_output_parent: "/opt"
+gpfs_rpm_output_folder: "software_installers"
+# Group with permissions to create folders in path defined above, necessary so user running playbook can place rpms on ansible server
+# User running this role must be a member of this group
+gpfs_rpm_output_group: "<< organization group >>"
+
+spectrum_scale_installer: "Spectrum_Scale_Data_Access-{{ gpfs_new_version }}.{{ gpfs_new_version_release }}-x86_64-Linux-install"
+
+target_kernel_packages:
+  - "kernel-{{ target_kernel }}"
+  - "kernel-headers-{{ target_kernel }}"
+  - "kernel-devel-{{ target_kernel }}"
+
+gpfs_rpms:
+  - gpfs.base-{{ gpfs_version }}.x86_64.rpm
+  - gpfs.gpl-{{ gpfs_version }}.noarch.rpm
+  - gpfs.docs-{{ gpfs_version }}.noarch.rpm
+  - gpfs.msg.en_US-{{ gpfs_version }}.noarch.rpm
+  - gpfs.license.da-{{ gpfs_version }}.x86_64.rpm
+  # This is one rpm that doesn't have gpfs version info in the name, this will likely change with a new gpfs version and need updating
+  - gpfs.gskit-8.0.55-19.1.x86_64.rpm
+
+# GPFS Manager rpms come from a few different paths when you install SpectrumScale, need to have some path info here
+gpfs_mgr_rpms_source:
+  - gpfs_rpms/gpfs.java-{{ gpfs_version }}.x86_64.rpm
+  - gpfs_rpms/gpfs.compression-{{ gpfs_version }}.x86_64.rpm
+  - gpfs_rpms/rhel{{ os_major_version }}/gpfs.librdkafka-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+  - zimon_rpms/rhel{{ os_major_version }}/gpfs.gss.pmsensors-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+  - zimon_rpms/rhel{{ os_major_version }}/gpfs.gss.pmcollector-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+
+# To copy manager rpms for redistribution later
+gpfs_mgr_rpms:
+  - gpfs.java-{{ gpfs_version }}.x86_64.rpm
+  - gpfs.compression-{{ gpfs_version }}.x86_64.rpm
+  - gpfs.librdkafka-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+  - gpfs.gss.pmsensors-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+  - gpfs.gss.pmcollector-{{ gpfs_version }}.el{{ os_major_version }}.x86_64.rpm
+
+gpfs_gplbin_dependencies:
+ - gpfs.base-{{ gpfs_version }}.x86_64.rpm
+ - gpfs.gpl-{{ gpfs_version }}.noarch.rpm
+
+gpfs_gplbin_rpmpath:  "/root/rpmbuild/RPMS/x86_64/gpfs.gplbin-{{ target_kernel }}-{{ gpfs_version }}.x86_64.rpm"

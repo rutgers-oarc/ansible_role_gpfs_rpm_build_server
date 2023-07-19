@@ -1,0 +1,17 @@
+---
+
+# gpfs software may not be compatible with the latest and greatest OS releases
+# Set minor release here for repo configs
+
+os_major_version: "9"
+os_minor_release: "1"
+
+target_kernel: "5.14.0-162.6.1.el9_1.x86_64"
+
+target_kernel_rpms:
+  - kernel-headers-{{ target_kernel }}.rpm
+  - kernel-devel-{{ target_kernel }}.rpm
+
+repo_files:
+  - rocky.repo
+  - rocky-extras.repo

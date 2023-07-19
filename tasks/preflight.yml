@@ -1,0 +1,133 @@
+---
+
+# Dependencies
+
+# If the SpectrumScale installer isn't present on the ansible server, stop
+# This has to be downloaded from IBM and placed on the ansible server before this role will work.  See readme file
+
+- name: gpfs_rpm_build_server | Check if desired Spectrum Scale installer is present
+  ansible.builtin.stat:
+    path: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/{{ spectrum_scale_installer }}"
+  register: spectrum_scale_installer_file
+  delegate_to: localhost
+
+- name: update_gpfs_software | Notify that Spectrum Scale installer is missing before exiting
+  ansible.builtin.debug:
+    #msg: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/Spectrum_Scale_Data_Access-{{ gpfs_new_version }}.{{ gpfs_new_version_release }}-x86_64-Linux-install not present on ansible server.  Exiting....."
+    msg: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/gpfs/{{ spectrum_scale_installer }} not present, exiting...."
+  when:
+    - not spectrum_scale_installer_file.stat.exists
+
+- name: gpfs_rpm_build_server | End playbook if SpectrumScale Installer is not preset on ansible server
+  ansible.builtin.meta: end_play
+  when:
+    - not spectrum_scale_installer_file.stat.exists
+
+- name: gpfs_rpm_build_server | Copy repo configs into place
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: /etc/yum.repos.d/{{ item }}
+    owner: root
+    group: root
+    mode: 0744
+  with_items: "{{ repo_files }}"
+  when: ansible_distribution == "Rocky"
+
+- name: gpfs_rpm_build_server | Install all updates excluding kernel packages
+  ansible.builtin.package:
+    name: "*"
+    state: latest
+    exclude: kernel*
+  notify: reboot
+  tags:
+    - skip_ansible_lint
+
+# Have to use yum instead of package module here to install older packages with allow_downgrade option set
+- name: gpfs_rpm_build_server | Install desired kernel packages
+  ansible.builtin.yum:
+    name: "{{ item }}"
+    state: present
+    allow_downgrade: true
+  with_items: "{{ target_kernel_packages }}"
+  when: ansible_distribution_major_version == "7" or ansible_distribution_major_version == "8"
+  notify: reboot
+
+- name: gpfs_rpm_build_server | Copy kernel rpms for Rocky 9 to system
+  ansible.builtin.copy:
+    src: "{{ gpfs_rpm_output_parent }}/{{ gpfs_rpm_output_folder }}/rocky/{{ os_major_version }}/{{ item }}"
+    dest: /root
+    owner: root
+    group: root
+    mode: 0544
+  with_items: "{{ target_kernel_rpms }}"
+  when:
+    - ansible_distribution == "Rocky"
+    - ansible_distribution_major_version == "9"
+
+- name: gpfs_rpm_build_server | Install kernel rpms for Rocky 9
+  ansible.builtin.yum:
+    name: /root/{{ item }}
+    state: present
+  with_items: "{{ target_kernel_rpms }}"
+  when:
+    - ansible_distribution == "Rocky"
+    - ansible_distribution_major_version == "9"
+  notify: reboot
+
+- name: gpfs_rpm_build_server | Reboot before proceeding after updates
+  ansible.builtin.meta: flush_handlers
+
+- name: gpfs_rpm_build_server | Install dependencies
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ gpfs_rpm_packages }}"
+
+- name: gpfs_rpm_build_server | Copy organization private gpg key to system
+  ansible.builtin.copy:
+    content: "{{ gpfs_rpm_private_key.key }}"
+    dest: "/etc/pki/rpm-gpg/{{ gpfs_rpm_private_key.organization_gpg_private_key_filename }}"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: gpfs_rpm_build_server | Gather installed private gpg key info
+  ansible.builtin.shell: "gpg --list-secret-keys --fingerprint"
+  register: installed_secret_keys
+  changed_when: installed_secret_keys.rc !=0
+  tags:
+    - skip_ansible_lint
+
+- name: gpfs_rpm_build_server | Import organization private GPG Key
+  ansible.builtin.shell: "gpg --batch --passphrase {{ gpfs_rpm_private_key.password }} --import /etc/pki/rpm-gpg/{{ gpfs_rpm_private_key.organization_gpg_private_key_filename }}"
+  tags:
+    - skip_ansible_lint
+  when: not installed_secret_keys.stdout_lines is search(gpfs_rpm_private_key.signature, multiline=True)
+
+# Config file that makes the rpm signing command work
+- name: gpfs_rpm_build_server |  Copy .rpmmacros file into place
+  ansible.builtin.template:
+    src: .rpmmacros-{{ ansible_distribution }}{{ ansible_distribution_major_version }}
+    dest: /root/.rpmmacros
+    owner: root
+    group: root
+    mode: 0600
+
+- name: gpfs_rpm_build_server | Copy password file for signing rpms
+  ansible.builtin.template:
+    src: .gpg_rpm_creds
+    dest: /root/.gpg_rpm_creds
+    owner: root
+    group: root
+    mode: 0400
+
+- name: gpfs_rpm_build_server | Copy expect script for signing rpms
+  ansible.builtin.template:
+    src: .sign_rpm_centos7.exp
+    dest: /root/.sign_rpm_centos7.exp
+    owner: root
+    group: root
+    mode: 0500
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version == "7"
