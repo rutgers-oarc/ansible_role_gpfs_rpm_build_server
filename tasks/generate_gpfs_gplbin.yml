@@ -61,7 +61,7 @@
   ansible.builtin.shell: "/root/.sign_rpm_centos7.exp {{ gpfs_gplbin_rpmpath }}"
   when:
     - not gpfs_gplbin_rpm.stat.exists
-    - ansible_distribution == "Centos"
+    - ansible_distribution == "CentOS"
     - ansible_distribution_major_version == "7"
   tags:
     - skip_ansible_lint
